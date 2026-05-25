@@ -1,4 +1,4 @@
-﻿plugins {
+lugins {
     id 'com.android.library'
     id 'maven-publish'
 }
@@ -34,7 +34,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.baiqingsong'
                 artifactId = 'lib-nayax'
-                version = '1.0.3'
+                version = '1.0.4'
             }
         }
     }
