@@ -1,10 +1,9 @@
-package com.dawn.nayax;
+﻿package com.dawn.nayax;
 
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.dawn.serial.LSerialUtil;
 
@@ -222,7 +221,7 @@ public class NayaxManager {
      */
     public void startPayment(float amount) {
         if (paying) {
-            Log.w(TAG, "收款进行中，忽略重复请求");
+            PaymentLog.w(TAG, "收款进行中，忽略重复请求");
             return;
         }
         if (!isConnected()) {
@@ -243,7 +242,7 @@ public class NayaxManager {
         requestedAmount = amount;
         receivedAmount = 0;
         currentState = State.STARTING_PAYMENT;
-        Log.i(TAG, "发起收款: " + amount);
+        PaymentLog.i(TAG, "发起收款: " + amount);
         sendCommand(NayaxCommand.getStartMoney(amount, minAmount));
     }
 
@@ -252,7 +251,7 @@ public class NayaxManager {
      */
     public void cancelPayment() {
         if (!paying) {
-            Log.w(TAG, "当前无收款进行中");
+            PaymentLog.w(TAG, "当前无收款进行中");
             return;
         }
         handler.removeMessages(MSG_POLL_PAYMENT);
@@ -362,12 +361,12 @@ public class NayaxManager {
                 new LSerialUtil.OnSerialListener() {
                     @Override
                     public void onOpenError(String portPath, Exception e) {
-                        Log.e(TAG, "串口打开失败: " + portPath, e);
+                        PaymentLog.e(TAG, "串口打开失败: " + portPath, e);
                     }
 
                     @Override
                     public void onReceiveError(Exception e) {
-                        Log.e(TAG, "串口接收异常", e);
+                        PaymentLog.e(TAG, "串口接收异常", e);
                         notifyError(ERROR_RECEIVE, "串口接收异常: " + e.getMessage());
                         handler.post(new Runnable() {
                             @Override
@@ -381,14 +380,14 @@ public class NayaxManager {
 
                     @Override
                     public void onSendError(Exception e) {
-                        Log.e(TAG, "串口发送异常", e);
+                        PaymentLog.e(TAG, "串口发送异常", e);
                         notifyError(ERROR_SEND, "串口发送异常: " + e.getMessage());
                     }
 
                     @Override
                     public void onDataReceived(String data) {
                         if (!TextUtils.isEmpty(data)) {
-                            Log.d(TAG, "收到原始数据: " + data);
+                            PaymentLog.d(TAG, "收到原始数据: " + data);
                             handleSerialData(data);
                         }
                     }
@@ -414,7 +413,7 @@ public class NayaxManager {
             try {
                 serialUtil.disconnect();
             } catch (Exception e) {
-                Log.w(TAG, "关闭串口异常", e);
+                PaymentLog.w(TAG, "关闭串口异常", e);
             }
             serialUtil = null;
         }
@@ -430,7 +429,7 @@ public class NayaxManager {
 
     private void attemptReconnect() {
         if (manualDisconnect) {
-            Log.d(TAG, "手动断连，不自动重连");
+            PaymentLog.d(TAG, "手动断连，不自动重连");
             return;
         }
         reconnectCount++;
@@ -440,7 +439,7 @@ public class NayaxManager {
             return;
         }
         long delay = RECONNECT_BASE_DELAY_MS * reconnectCount;
-        Log.i(TAG, "准备第 " + reconnectCount + " 次重连，延迟 " + delay + "ms");
+        PaymentLog.i(TAG, "准备第 " + reconnectCount + " 次重连，延迟 " + delay + "ms");
         handler.sendEmptyMessageDelayed(MSG_RECONNECT, delay);
     }
 
@@ -448,7 +447,7 @@ public class NayaxManager {
      * 运行中串口断开处理
      */
     private void onRuntimeDisconnect() {
-        Log.w(TAG, "运行中串口断开");
+        PaymentLog.w(TAG, "运行中串口断开");
         removeAllMessages();
         if (paying) {
             paying = false;
@@ -495,7 +494,7 @@ public class NayaxManager {
     private void handleOperationTimeout() {
         operationRetryCount++;
         if (operationRetryCount > MAX_OPERATION_RETRIES) {
-            Log.e(TAG, "操作超时，已达最大重试次数");
+            PaymentLog.e(TAG, "操作超时，已达最大重试次数");
             notifyError(ERROR_OPERATION_TIMEOUT, "操作响应超时，状态: " + currentState);
             if (paying) {
                 paying = false;
@@ -505,7 +504,7 @@ public class NayaxManager {
             return;
         }
 
-        Log.w(TAG, "操作超时，第 " + operationRetryCount + " 次重试，状态: " + currentState);
+        PaymentLog.w(TAG, "操作超时，第 " + operationRetryCount + " 次重试，状态: " + currentState);
         switch (currentState) {
             case COMPLETING_PAYMENT:
                 sendCommand(NayaxCommand.getCompleteMoney());
@@ -577,7 +576,7 @@ public class NayaxManager {
                 String candidate = buffered.substring(0, len);
                 if (NayaxCommand.validateResponse(candidate)) {
                     dataBuffer.delete(0, len);
-                    Log.d(TAG, "解析完整帧: " + candidate);
+                    PaymentLog.d(TAG, "解析完整帧: " + candidate);
                     processValidFrame(candidate);
                     foundFrame = true;
                     break;
@@ -586,7 +585,7 @@ public class NayaxManager {
 
             if (!foundFrame) {
                 if (dataBuffer.length() > MAX_BUFFER_SIZE) {
-                    Log.w(TAG, "缓冲区溢出，清除: " + dataBuffer);
+                    PaymentLog.w(TAG, "缓冲区溢出，清除: " + dataBuffer);
                     dataBuffer.setLength(0);
                 }
                 return;
@@ -618,7 +617,7 @@ public class NayaxManager {
                 handleSaleResponse(data);
                 break;
             default:
-                Log.d(TAG, "状态 " + currentState + " 下收到未处理数据: " + data);
+                PaymentLog.d(TAG, "状态 " + currentState + " 下收到未处理数据: " + data);
                 break;
         }
     }
@@ -631,7 +630,7 @@ public class NayaxManager {
         deviceVersion = data.substring(6, 8);
         deviceType = data.substring(8, 10);
         currencyCode = data.substring(10, 14);
-        Log.i(TAG, "设备状态: version=" + deviceVersion
+        PaymentLog.i(TAG, "设备状态: version=" + deviceVersion
                 + " type=" + deviceType + " currency=" + currencyCode);
 
         if (heartbeatPending) {
@@ -656,7 +655,7 @@ public class NayaxManager {
             minAmount = (float) (base / Math.pow(10, decimals));
             deviceReady = true;
             currentState = State.IDLE;
-            Log.i(TAG, "设备就绪: minAmount=" + minAmount);
+            PaymentLog.i(TAG, "设备就绪: minAmount=" + minAmount);
             NayaxCallback cb = this.callback;
             if (cb != null) {
                 cb.onDeviceReady(deviceVersion, deviceType, currencyCode, minAmount);
@@ -664,14 +663,14 @@ public class NayaxManager {
             // 设备就绪，启动心跳保活
             startHeartbeat();
         } catch (NumberFormatException e) {
-            Log.e(TAG, "最小面额解析失败", e);
+            PaymentLog.e(TAG, "最小面额解析失败", e);
             notifyError(ERROR_INVALID_RESPONSE, "最小面额响应解析失败");
         }
     }
 
     private void handleStartPaymentResponse(String data) {
         if (!RESP_START_PAYMENT_OK.equalsIgnoreCase(data)) return;
-        Log.i(TAG, "收款已发起");
+        PaymentLog.i(TAG, "收款已发起");
         NayaxCallback cb = this.callback;
         if (cb != null) {
             cb.onPaymentStarted();
@@ -687,7 +686,7 @@ public class NayaxManager {
             int multiple = Integer.parseInt(data.substring(8, 14), 16);
             float actualAmount = multiple * minAmount;
 
-            Log.i(TAG, "支付检测: multiple=" + multiple + " actual=" + actualAmount
+            PaymentLog.i(TAG, "支付检测: multiple=" + multiple + " actual=" + actualAmount
                     + " requested=" + requestedAmount);
 
             if (Math.round(requestedAmount * 100) <= Math.round(actualAmount * 100)) {
@@ -709,7 +708,7 @@ public class NayaxManager {
                 }
             }
         } catch (NumberFormatException e) {
-            Log.e(TAG, "收款金额解析失败", e);
+            PaymentLog.e(TAG, "收款金额解析失败", e);
             notifyError(ERROR_INVALID_RESPONSE, "收款金额响应解析失败");
         }
     }
@@ -718,7 +717,7 @@ public class NayaxManager {
         if (!RESP_COMPLETE_OK.equalsIgnoreCase(data)) return;
         handler.removeMessages(MSG_OPERATION_TIMEOUT);
         paying = false;
-        Log.i(TAG, "收款完成: " + receivedAmount);
+        PaymentLog.i(TAG, "收款完成: " + receivedAmount);
         NayaxCallback cb = this.callback;
         if (cb != null) {
             cb.onPaymentCompleted(receivedAmount);
@@ -734,7 +733,7 @@ public class NayaxManager {
         handler.removeMessages(MSG_POLL_PAYMENT);
         handler.removeMessages(MSG_PAYMENT_TIMEOUT);
         handler.removeMessages(MSG_COMPLETE_PAYMENT);
-        Log.i(TAG, "收款已取消");
+        PaymentLog.i(TAG, "收款已取消");
         NayaxCallback cb = this.callback;
         if (cb != null) {
             cb.onPaymentCancelled();
@@ -746,7 +745,7 @@ public class NayaxManager {
     private void handleSaleResponse(String data) {
         if (!RESP_SALE_OK.equalsIgnoreCase(data)) return;
         handler.removeMessages(MSG_OPERATION_TIMEOUT);
-        Log.i(TAG, "售卖结果已确认");
+        PaymentLog.i(TAG, "售卖结果已确认");
         NayaxCallback cb = this.callback;
         if (cb != null) {
             cb.onSaleResult(true);
@@ -759,14 +758,14 @@ public class NayaxManager {
 
     private void sendCommand(String command) {
         if (TextUtils.isEmpty(command)) {
-            Log.w(TAG, "指令为空，跳过发送");
+            PaymentLog.w(TAG, "指令为空，跳过发送");
             return;
         }
         if (serialUtil == null || !serialUtil.isConnected()) {
-            Log.w(TAG, "串口未连接，无法发送: " + command);
+            PaymentLog.w(TAG, "串口未连接，无法发送: " + command);
             return;
         }
-        Log.d(TAG, "发送指令: " + command);
+        PaymentLog.d(TAG, "发送指令: " + command);
         serialUtil.sendHex(command);
     }
 
@@ -784,7 +783,7 @@ public class NayaxManager {
     }
 
     private void notifyError(int code, String message) {
-        Log.e(TAG, "错误[" + code + "]: " + message);
+        PaymentLog.e(TAG, "错误[" + code + "]: " + message);
         NayaxCallback cb = this.callback;
         if (cb != null) {
             cb.onError(code, message);
@@ -814,6 +813,7 @@ public class NayaxManager {
             case MSG_PAYMENT_TIMEOUT:
                 paying = false;
                 handler.removeMessages(MSG_POLL_PAYMENT);
+                PaymentLog.w(TAG, "收款超时");
                 notifyError(ERROR_PAYMENT_TIMEOUT, "收款超时");
                 currentState = State.IDLE;
                 startHeartbeat();
@@ -834,13 +834,13 @@ public class NayaxManager {
             case MSG_HEARTBEAT_TIMEOUT:
                 if (heartbeatPending) {
                     heartbeatPending = false;
-                    Log.w(TAG, "心跳超时，设备可能已断连");
+                    PaymentLog.w(TAG, "心跳超时，设备可能已断连");
                     onRuntimeDisconnect();
                 }
                 break;
             case MSG_INIT_TIMEOUT:
                 if (!deviceReady) {
-                    Log.w(TAG, "设备初始化超时");
+                    PaymentLog.w(TAG, "设备初始化超时");
                     notifyError(ERROR_INIT_TIMEOUT, "设备初始化超时，正在重连");
                     removeAllMessages();
                     closeSerialPort();
