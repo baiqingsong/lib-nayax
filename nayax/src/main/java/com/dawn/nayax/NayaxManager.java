@@ -1,4 +1,4 @@
-﻿package com.dawn.nayax;
+package com.dawn.nayax;
 
 import android.os.Handler;
 import android.os.Looper;

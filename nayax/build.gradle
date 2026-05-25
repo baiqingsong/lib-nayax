@@ -34,7 +34,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.baiqingsong'
                 artifactId = 'lib-nayax'
-                version = '1.0.5'
+                version = '1.0.6'
             }
         }
     }
